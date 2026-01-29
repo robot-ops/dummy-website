@@ -1,66 +1,167 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
+<html lang="en" class="h-full">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>@yield('title', 'Dashboard Monitoring')</title>
 
-    <title>{{ config('app.name', 'Demo Application') }}</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <!-- Alpine.js for interactivity -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .card-shadow:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transform: translateY(-2px);
+            transition: all 0.3s ease;
+        }
+
+        .animate-pulse-slow {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .status-online {
+            width: 10px;
+            height: 10px;
+            background-color: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .table-row:hover {
+            background-color: #f3f4f6;
+        }
+
+        .dark .table-row:hover {
+            background-color: #374151;
+        }
+
+        /* Data update animation */
+        @keyframes pulse-data {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .data-update {
+            animation: pulse-data 0.5s ease-in-out;
+        }
+
+        /* Number formatting */
+        .data-value {
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.05em;
+        }
+    </style>
+
+    @stack('styles')
 </head>
 
-<body class="antialiased bg-[#FDFDFC] dark:bg-[#0a0a0a] text-[#1b1b18] dark:text-[#EDEDEC] min-h-screen flex flex-col font-['Instrument_Sans']">
+<body class="h-full bg-gray-50 dark:bg-gray-900">
 
-    <nav class="sticky top-0 z-50 w-full border-b border-black/5 dark:border-white/5 bg-white/70 dark:bg-[#0a0a0a]/70 backdrop-blur-xl">
+    <!-- Navigation Bar -->
+    <nav class="gradient-bg shadow-lg">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16 items-center">
-                <div class="flex-shrink-0 flex items-center gap-2">
-                    <div class="w-8 h-8 bg-orange-500 rounded-lg shadow-lg shadow-orange-500/20"></div>
-                    <span class="font-bold text-xl tracking-tight">{{ config('app.name', 'Laravel') }}</span>
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <i class="fas fa-chart-line text-white text-2xl mr-3"></i>
+                        <h1 class="text-white text-xl font-bold">{{ config('app.name', 'Datalogger Monitoring') }}</h1>
+                    </div>
                 </div>
-
-                <div class="hidden md:flex items-center space-x-8 text-sm font-medium">
-                    <a href="#" class="hover:text-orange-500 transition-colors">Dashboard</a>
-                    <a href="#" class="text-black/50 dark:text-white/50 hover:text-orange-500 transition-colors">Projects</a>
-                    <a href="#" class="text-black/50 dark:text-white/50 hover:text-orange-500 transition-colors">Settings</a>
-                </div>
-
-                <div class="flex items-center gap-4">
-                    <button class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2m8-10a4 4 0 100-8 4 4 0 000 8z" />
-                        </svg>
-                    </button>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center text-white">
+                        <span class="status-online mr-2"></span>
+                        <span class="text-sm">Live</span>
+                    </div>
+                    <div class="text-white text-sm" id="current-time">
+                        {{ date('Y-m-d H:i:s') }}
+                    </div>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {{-- Header Page (Opsional) --}}
-        @if (isset($header))
-        <header class="mb-10">
-            {{ $header }}
-        </header>
-        @endif
-
-        {{-- Slot Konten Utama --}}
-        <div class="animate-in fade-in slide-in-from-bottom-4 duration-700">
-            @yield('content')
-        </div>
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        @yield('content')
     </main>
 
-    <footer class="border-t border-black/5 dark:border-white/5 py-8">
-        <div class="max-w-7xl mx-auto px-4 text-center text-sm text-black/40 dark:text-white/40">
-            &copy; {{ date('Y') }} {{ config('app.name') }}. Built with passion.
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-gray-800 shadow-lg mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <p class="text-center text-gray-600 dark:text-gray-400 text-sm">
+                &copy; {{ date('Y') }} Datalogger Monitoring Dashboard. Demo untuk Pelatihan.
+            </p>
         </div>
     </footer>
 
+    <!-- Scripts -->
+    <script>
+        // Update current time
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('id-ID', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            document.getElementById('current-time').textContent = timeString;
+        }
+
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // CSRF Token setup for Ajax
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    </script>
+
+    @stack('scripts')
 </body>
 
 </html>
