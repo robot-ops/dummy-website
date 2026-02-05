@@ -160,6 +160,7 @@
         // CSRF Token setup for Ajax
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     </script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
     @stack('scripts')
 </body>
