@@ -1,323 +1,115 @@
-# Quick Start Guide - Dashboard Monitoring
+# Dashboard Monitoring System (Datalogger + MQTT)
 
-## 🚀 Panduan Cepat (5 Menit)
+🚀 **Panduan Setup dan Penggunaan**
 
-### Step 1: Persiapan File
+Sistem monitoring datalogger berbasis Laravel dengan integrasi MQTT untuk pemantauan data sensor secara real-time.
+
+---
+
+## 🛠️ Instalasi & Setup (Local Development)
+
+Ikuti langkah-langkah berikut untuk menjalankan project di mesin lokal Anda:
+
+### 1. Clone Repository
 ```bash
-# Copy semua file ke project Laravel Anda:
-
-# 1. Model
-cp Datalogger.php app/Models/
-
-# 2. Controller
-cp DataloggerController.php app/Http/Controllers/
-
-# 3. Export (untuk Excel)
-cp DataloggerExport.php app/Exports/
-
-# 4. Routes
-# Tambahkan isi web.php ke routes/web.php
-
-# 5. Views
-mkdir -p resources/views/layouts
-mkdir -p resources/views/dashboard
-cp layouts_app.blade.php resources/views/layouts/app.blade.php
-cp dashboard_main.blade.php resources/views/dashboard/main.blade.php
-
-# 6. Migration sudah ada (gunakan file yang sudah di-upload)
+git clone https://github.com/username/dummy-website.git
+cd dummy-website
 ```
 
-### Step 2: Install Dependencies (Opsional)
+### 2. Install Dependencies
+Project ini menggunakan Composer untuk manajemen library PHP.
 ```bash
-# Untuk fitur export Excel
-composer require maatwebsite/excel
+composer install
+```
+> **Catatan:** Project ini menggunakan CDN untuk Tailwind CSS, Chart.js, dan Alpine.js, sehingga Anda tidak perlu menjalankan `npm install` kecuali ingin menambahkan build process kustom.
+
+### 3. Konfigurasi Environment
+Salin file `.env.example` menjadi `.env` dan generate application key:
+```bash
+cp .env.example .env
+php artisan key:generate
 ```
 
-### Step 3: Database Setup
+### 4. Setup Database
+1. Buat database baru di MySQL/MariaDB (misal: `demo_application`).
+2. Update konfigurasi database di file `.env`:
+   ```env
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=demo_application
+   DB_USERNAME=root
+   DB_PASSWORD=
+   ```
+3. Jalankan migration:
 ```bash
-# Jalankan migration
 php artisan migrate
-
-# Generate sample data (100 records)
-php artisan tinker
-
-# Di tinker, jalankan:
-for ($i = 0; $i < 100; $i++) {
-    \App\Models\Datalogger::create([
-        'data1' => rand(200, 500) / 10,
-        'data2' => rand(150, 800) / 10,
-        'logged_at' => now()->subMinutes(100 - $i),
-    ]);
-}
-exit
 ```
 
-### Step 4: Jalankan Server
+### 5. Setup MQTT
+Sesuaikan detail broker MQTT di `.env`. Untuk testing, Anda bisa menggunakan broker publik:
+```env
+MQTT_HOST=broker.emqx.io
+MQTT_PORT=1883
+MQTT_AUTH_USERNAME=    # Kosongkan jika tanpa auth
+MQTT_AUTH_PASSWORD=    # Kosongkan jika tanpa auth
+MQTT_CLIENT_ID=        # Kosongkan untuk auto-id
+MQTT_SUBSCRIBE_TOPIC=data/Haiwell/percobaan1/+
+```
+
+---
+
+## 📡 Cara Menjalankan Aplikasi
+
+### 1. Jalankan Web Server
 ```bash
 php artisan serve
 ```
+Akses dashboard di Browser: [http://localhost:8000](http://127.0.0.1:8000)
 
-### Step 5: Buka Browser
-```
-http://localhost:8000
-```
-
----
-
-## 📸 Preview Dashboard
-
-### 1. **Navigation Bar**
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 📊 Datalogger Monitoring        🟢 Live  ⏰ 2026-01-29 15:30│
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 2. **Statistics Cards** (4 Cards dalam 1 Row)
-```
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│ Total Records│ │  Data 1 Avg  │ │  Data 2 Avg  │ │ Latest Data  │
-│              │ │              │ │              │ │              │
-│    100       │ │    37.45     │ │    54.32     │ │    42.8      │
-│              │ │ Min: 20.0    │ │ Min: 15.0    │ │ 15:30:00     │
-│  📁          │ │ Max: 50.0    │ │ Max: 80.0    │ │  🕐          │
-└──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
-```
-
-### 3. **Grafik Realtime**
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 📈 Grafik Realtime               [100 Data ▼] [🔄 Refresh] │
-├─────────────────────────────────────────────────────────────┤
-│ Start Date: [____] End Date: [____] [Apply Filter]         │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│   50 │                    ╱╲                               │
-│   40 │        ╱╲         ╱  ╲      ╱╲                     │
-│   30 │   ╱╲  ╱  ╲   ╱╲  ╱    ╲    ╱  ╲                    │
-│   20 │  ╱  ╲╱    ╲ ╱  ╲╱      ╲  ╱    ╲                   │
-│   10 │ ╱           ╲            ╲╱      ╲                  │
-│    0 └─────────────────────────────────────────            │
-│        10:00  10:30  11:00  11:30  12:00  12:30           │
-│                                                             │
-│  Legend: ─ Data 1 (Blue)  ─ Data 2 (Purple)               │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 4. **Data Realtime** (Auto-refresh 5 detik)
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 📡 Data Realtime (Auto-refresh setiap 5 detik)             │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐│
-│  │   Data 1    │  │   Data 2    │  │     Timestamp       ││
-│  │             │  │             │  │                     ││
-│  │    42.8     │  │    75.2     │  │ 2026-01-29 15:30:00 ││
-│  │   Unit: °C  │  │   Unit: %   │  │    Logged At        ││
-│  └─────────────┘  └─────────────┘  └─────────────────────┘│
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 5. **History Datalogger Table**
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 📜 History Datalogger    [📄 CSV] [📊 Excel]                │
-├─────────────────────────────────────────────────────────────┤
-│ Sort: [Logged At ▼] Order: [Desc ▼] Per Page: [20 ▼] [🔄] │
-│ Start: [____] End: [____] [🔍 Filter] [✖ Clear]            │
-├─────────────────────────────────────────────────────────────┤
-│ ID │ Data 1 │ Data 2 │ Logged At         │ Created At      │
-├────┼────────┼────────┼───────────────────┼─────────────────┤
-│ 100│  42.8  │  75.2  │ 2026-01-29 15:30  │ 2026-01-29 15:30│
-│  99│  41.5  │  73.8  │ 2026-01-29 15:25  │ 2026-01-29 15:25│
-│  98│  40.2  │  72.1  │ 2026-01-29 15:20  │ 2026-01-29 15:20│
-│ ...│  ...   │  ...   │ ...               │ ...             │
-├────┴────────┴────────┴───────────────────┴─────────────────┤
-│ Showing 1 to 20 of 100    [← Prev] [1][2][3][4][5] [Next →]│
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 6. **Testing Tools**
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 🛠️ Testing Tools (Demo Only)                                │
-│ [➕ Generate 50 Sample Data]                                │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🎨 Warna Theme
-
-### Light Mode
-- Primary: Indigo (#667eea - #764ba2)
-- Data 1: Blue (#3b82f6)
-- Data 2: Purple (#a855f7)
-- Success: Green (#10b981)
-- Warning: Orange (#f59e0b)
-- Background: Gray-50 (#f9fafb)
-
-### Dark Mode (Auto)
-- Background: Gray-900 (#111827)
-- Card: Gray-800 (#1f2937)
-- Text: White/Gray-100
-
----
-
-## ⚙️ Fitur-Fitur
-
-### ✅ Sudah Tersedia
-- [x] Dashboard dengan statistik cards
-- [x] Grafik realtime dengan Chart.js
-- [x] Monitor data realtime (auto-refresh)
-- [x] History table dengan pagination
-- [x] Sorting multi-kolom (ID, Data1, Data2, Logged At)
-- [x] Filter berdasarkan date range
-- [x] Download CSV
-- [x] Download Excel (XLSX)
-- [x] Responsive design
-- [x] Dark mode support
-- [x] Real-time clock
-- [x] Status indicator (Live)
-- [x] API endpoints lengkap
-
-### 🔮 Enhancement Ideas (Future)
-- [ ] WebSocket untuk real-time push
-- [ ] User authentication
-- [ ] Data visualization: Pie chart, Bar chart
-- [ ] Export PDF
-- [ ] Email alerts
-- [ ] Data comparison tools
-- [ ] Advanced filtering
-- [ ] Multi-language support
-- [ ] Data backup/restore
-- [ ] Mobile app
-
----
-
-## 🐛 Common Issues & Solutions
-
-### Issue 1: Chart tidak muncul
-**Solution:**
-```javascript
-// Pastikan Chart.js loaded
-console.log(typeof Chart); // harus return "function"
-
-// Check element
-console.log(document.getElementById('realtimeChart'));
-```
-
-### Issue 2: Data tidak auto-refresh
-**Solution:**
-```javascript
-// Check di console browser
-// Pastikan tidak ada error JavaScript
-// Pastikan setInterval berjalan
-```
-
-### Issue 3: Download tidak berfungsi
-**Solution:**
+### 2. Jalankan MQTT Subscriber (Penting!)
+Agar data yang dikirim sensor tersimpan ke database, Anda harus menjalankan worker di terminal terpisah:
 ```bash
-# Install package Excel
-composer require maatwebsite/excel
-
-# Clear cache
-php artisan cache:clear
-php artisan config:clear
-```
-
-### Issue 4: CSRF Token mismatch
-**Solution:**
-```blade
-<!-- Pastikan ada di layout -->
-<meta name="csrf-token" content="{{ csrf_token() }}">
+php artisan app:mqtt-subscribe
 ```
 
 ---
 
-## 📱 Mobile Responsive
+## 🚀 Deployment (Production)
 
-Dashboard fully responsive untuk:
-- 📱 Mobile (320px - 767px)
-- 📱 Tablet (768px - 1023px)
-- 💻 Desktop (1024px+)
+Untuk menjalankan aplikasi di server produksi (Linux/Ubuntu), perhatikan poin berikut:
 
----
+### 1. Optimasi Laravel
+```bash
+composer install --optimize-autoloader --no-dev
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
 
-## 🎯 Use Cases
+### 2. Management Process (MQTT Worker)
+Di produksi, jangan menjalankan `php artisan app:mqtt-subscribe` secara manual. Gunakan **Supervisor** agar worker otomatis restart jika mati.
 
-### 1. **IoT Data Monitoring**
-- Temperature sensors
-- Humidity sensors
-- Environmental monitoring
-
-### 2. **Industrial Monitoring**
-- Production line data
-- Quality control metrics
-- Machine performance
-
-### 3. **Research & Development**
-- Experiment data logging
-- Lab equipment monitoring
-- Data analysis
-
-### 4. **Training & Education**
-- Teaching web development
-- Laravel training
-- Real-time systems demo
-
----
-
-## 📊 Performance Metrics
-
-### Load Time
-- Initial load: < 2 seconds
-- Data refresh: < 500ms
-- Chart update: < 300ms
-
-### Database Queries
-- History: 1 query (with pagination)
-- Realtime: 1 query
-- Chart: 1 query
-- Statistics: 1 query
-
-### Optimization Tips
-```php
-// Use eager loading
-$data = Datalogger::with('relations')->get();
-
-// Use caching for statistics
-Cache::remember('statistics', 60, function() {
-    return Datalogger::getStatistics();
-});
-
-// Limit chart data
-$chartData = Datalogger::latest()->limit(100)->get();
+Contoh konfigurasi Supervisor (`/etc/supervisor/conf.d/mqtt-worker.conf`):
+```ini
+[program:mqtt-worker]
+process_name=%(program_name)s_%(process_num)02d
+command=php /var/www/html/artisan app:mqtt-subscribe
+autostart=true
+autorestart=true
+user=www-data
+redirect_stderr=true
+stdout_logfile=/var/www/html/storage/logs/mqtt-worker.log
 ```
 
 ---
 
-## 🔒 Security Notes
+## 📊 Panduan Dashboard
 
-**For Production:**
-1. Enable authentication
-2. Add rate limiting
-3. Validate all inputs
-4. Use HTTPS
-5. Sanitize outputs
-6. Add CSRF protection
-7. Implement authorization
-8. Log all activities
+- **Tab Live (Live Dashboard):** Monitoring real-time dari MQTT. Grafik hanya akan terisi saat ada data masuk setelah halaman dibuka.
+- **Tab Riwayat (History):** Melihat data masa lalu yang tersimpan di database. Mendukung filter tanggal dan ekspor data ke Excel/CSV.
+- **Generate Data:** Gunakan tombol "Generate 50 Sample Data" di bagian bawah dashboard untuk melakukan pengujian tanpa perangkat MQTT.
 
 ---
 
-## 📞 Support & Feedback
-
-Untuk pertanyaan, bug report, atau feature request, silakan:
-1. Check dokumentasi
-2. Review API documentation
-3. Contact development team
-
----
-
-**Happy Monitoring! 📊🚀**
+Happy Monitoring! 📊🚀

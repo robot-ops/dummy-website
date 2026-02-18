@@ -16,7 +16,7 @@ class DataloggerController extends Controller
      */
     public function index()
     {
-        return view('main');
+        return view('dashboard.main');
     }
 
     /**
@@ -74,9 +74,11 @@ class DataloggerController extends Controller
             $query->filterByDateRange($startDate, $endDate);
         }
 
-        $data = $query->orderBy('logged_at', 'asc')
+        $data = $query->orderBy('logged_at', 'desc')
             ->limit($limit)
-            ->get(['logged_at', 'data1', 'data2']);
+            ->get(['logged_at', 'data1', 'data2'])
+            ->reverse()
+            ->values();
 
         return response()->json($data);
     }

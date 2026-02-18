@@ -51,6 +51,9 @@
 
             // Filters
             chartLimit: 100,
+            sortBy: 'logged_at',
+            sortOrder: 'desc',
+            perPage: 20,
             dateRange: {
                 start: '',
                 end: ''
@@ -60,6 +63,29 @@
                 end: ''
             },
             loading: false,
+
+            // Helpers
+            formatNumber(value) {
+                if (value === null || value === undefined) return '-';
+                return parseFloat(value).toLocaleString('id-ID', {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 2
+                });
+            },
+
+            formatDateTime(value) {
+                if (!value) return '-';
+                const date = new Date(value);
+                return date.toLocaleString('id-ID', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+            },
 
             // Getter untuk Pagination
             get paginationPages() {
@@ -81,7 +107,6 @@
                     this.loadStatistics();
                     this.loadHistory();
                     this.loadRealtimeData(); // Fetch terakhir dari DB
-                    this.loadChartData();
                     this.loadHistoryChartData();
 
                     // Jalankan Koneksi MQTT
@@ -248,38 +273,113 @@
                 if (this.historyChartDateRange.start) params.append('start_date', this.historyChartDateRange.start);
                 if (this.historyChartDateRange.end) params.append('end_date', this.historyChartDateRange.end);
 
-                const res = await fetch(`/api/datalogger/chart?${params}`);
-                const data = await res.json();
+                try {
+                    const res = await fetch(`/api/datalogger/chart?${params}`);
+                    const data = await res.json();
 
-                historyChartInstance.data.labels = data.map(d => new Date(d.logged_at).toLocaleDateString());
-                historyChartInstance.data.datasets[0].data = data.map(d => d.data1);
-                historyChartInstance.data.datasets[1].data = data.map(d => d.data2);
-                historyChartInstance.update();
+                    historyChartInstance.data.labels = data.map(d => {
+                        return new Date(d.logged_at).toLocaleString('id-ID', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                    });
+                    historyChartInstance.data.datasets[0].data = data.map(d => d.data1);
+                    historyChartInstance.data.datasets[1].data = data.map(d => d.data2);
+                    historyChartInstance.update();
+                } catch (e) {
+                    console.error('Error loading history chart data:', e);
+                }
             },
 
-            // API Loaders lainnya (loadStatistics, loadHistory, dll) tetap sama...
+            // API Loaders
             async loadStatistics() {
-                const res = await fetch('/api/datalogger/statistics');
-                this.statistics = await res.json();
+                try {
+                    const res = await fetch('/api/datalogger/statistics');
+                    this.statistics = await res.json();
+                } catch (e) {
+                    console.error('Error loading stats:', e);
+                }
             },
 
             async loadHistory(page = 1) {
                 this.loading = true;
-                const res = await fetch(`/api/datalogger/history?page=${page}`);
-                const data = await res.json();
-                this.historyData = data.data;
-                this.pagination = {
-                    current_page: data.current_page,
-                    last_page: data.last_page,
-                    total: data.total
-                };
-                this.loading = false;
+                try {
+                    const params = new URLSearchParams({
+                        page: page,
+                        per_page: this.perPage,
+                        sort_by: this.sortBy,
+                        sort_order: this.sortOrder
+                    });
+                    if (this.dateRange.start) params.append('start_date', this.dateRange.start);
+                    if (this.dateRange.end) params.append('end_date', this.dateRange.end);
+
+                    const res = await fetch(`/api/datalogger/history?${params}`);
+                    const data = await res.json();
+                    this.historyData = data.data;
+                    this.pagination = {
+                        current_page: data.current_page,
+                        last_page: data.last_page,
+                        total: data.total
+                    };
+                } catch (e) {
+                    console.error('Error loading history:', e);
+                } finally {
+                    this.loading = false;
+                }
             },
 
             async loadRealtimeData() {
-                const res = await fetch('/api/datalogger/realtime?limit=1');
-                const data = await res.json();
-                if (data.length > 0) this.realtimeData = data[0];
+                try {
+                    const res = await fetch('/api/datalogger/realtime?limit=1');
+                    const data = await res.json();
+                    if (data.length > 0) this.realtimeData = data[0];
+                } catch (e) {
+                    console.error('Error loading realtime data:', e);
+                }
+            },
+
+            async generateSampleData() {
+                try {
+                    const res = await fetch('/api/datalogger/generate-sample', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ count: 50 })
+                    });
+                    const result = await res.json();
+                    alert(result.message);
+                    this.loadHistory();
+                    this.loadStatistics();
+                    this.loadChartData();
+                } catch (e) {
+                    console.error('Error generating sample:', e);
+                }
+            },
+
+            goToPage(page) {
+                if (page < 1 || page > this.pagination.last_page) return;
+                this.loadHistory(page);
+            },
+
+            clearFilters() {
+                this.dateRange = { start: '', end: '' };
+                this.loadHistory();
+            },
+
+            downloadData(type) {
+                const params = new URLSearchParams();
+                if (this.dateRange.start) params.append('start_date', this.dateRange.start);
+                if (this.dateRange.end) params.append('end_date', this.dateRange.end);
+                
+                const url = type === 'csv' 
+                    ? `/api/datalogger/download/csv?${params}` 
+                    : `/api/datalogger/download/excel?${params}`;
+                
+                window.location.href = url;
             }
         }
     }

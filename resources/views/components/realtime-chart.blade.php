@@ -40,9 +40,7 @@
                         <option value="100">Last 100</option>
                         <option value="200">Last 200</option>
                     </select>
-                    <button @click="loadChartData()" class="px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-sm font-medium transition">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
+
                 </div>
             </div>
 
